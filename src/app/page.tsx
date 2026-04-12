@@ -80,17 +80,75 @@ export default function Home() {
     });
 
     try {
-      // ── 1. Upload files to GCS ──────────────────────────────
-      progress(1, "Uploading files to cloud storage...");
-      const fd = new FormData();
-      images.forEach((img) => fd.append("images", img));
-      fd.append("logo", logo);
-      if (audioMode === "custom" && customAudio) {
-        fd.append("customAudio", customAudio);
-      }
-      const uploadData = await callStep("/api/steps/upload", fd);
-      const { jobId: jid, imageUrls, logoUrl, customAudioUrl } = uploadData;
+      // ── 1. Request signed upload URLs ──────────────────────
+      progress(1, "Requesting upload URLs...");
+      const imageMetas = images.map((f) => ({
+        file: f,
+        name: f.name,
+        contentType: f.type || "image/jpeg",
+      }));
+      const logoMeta = {
+        file: logo,
+        name: logo.name,
+        contentType: logo.type || "image/png",
+      };
+      const customAudioMeta =
+        audioMode === "custom" && customAudio
+          ? {
+              file: customAudio,
+              name: customAudio.name,
+              contentType: customAudio.type || "audio/mpeg",
+            }
+          : null;
+
+      const uploadData = await callStep("/api/steps/upload", {
+        images: imageMetas.map(({ name, contentType }) => ({ name, contentType })),
+        logo: { name: logoMeta.name, contentType: logoMeta.contentType },
+        customAudio: customAudioMeta
+          ? { name: customAudioMeta.name, contentType: customAudioMeta.contentType }
+          : null,
+      });
+      const {
+        jobId: jid,
+        images: imageTargets,
+        logo: logoTarget,
+        customAudio: customAudioTarget,
+      } = uploadData as {
+        jobId: string;
+        images: { uploadUrl: string; readUrl: string }[];
+        logo: { uploadUrl: string; readUrl: string };
+        customAudio: { uploadUrl: string; readUrl: string } | null;
+      };
       setJobId(jid);
+
+      // ── 1b. PUT files directly to GCS (bypasses Vercel 4.5MB cap) ──
+      progress(1, "Uploading files to cloud storage...");
+      async function putToGcs(
+        file: File,
+        contentType: string,
+        target: { uploadUrl: string }
+      ) {
+        const res = await fetch(target.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: file,
+        });
+        if (!res.ok) {
+          throw new Error(`Upload failed (${res.status}): ${await res.text()}`);
+        }
+      }
+
+      await Promise.all(
+        imageMetas.map((m, i) => putToGcs(m.file, m.contentType, imageTargets[i]))
+      );
+      await putToGcs(logoMeta.file, logoMeta.contentType, logoTarget);
+      if (customAudioMeta && customAudioTarget) {
+        await putToGcs(customAudioMeta.file, customAudioMeta.contentType, customAudioTarget);
+      }
+
+      const imageUrls = imageTargets.map((t) => t.readUrl);
+      const logoUrl = logoTarget.readUrl;
+      const customAudioUrl = customAudioTarget?.readUrl ?? null;
 
       // ── 2. Analyze images ───────────────────────────────────
       progress(2, "Analyzing property images with AI...");

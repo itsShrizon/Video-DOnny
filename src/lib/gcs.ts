@@ -43,6 +43,24 @@ export async function uploadBufferToGCS(
   return url;
 }
 
+export async function getSignedUploadUrl(
+  filename: string,
+  contentType: string
+): Promise<{ uploadUrl: string; readUrl: string }> {
+  const file = getBucket().file(filename);
+  const [uploadUrl] = await file.getSignedUrl({
+    version: "v4",
+    action: "write",
+    expires: Date.now() + 15 * 60 * 1000,
+    contentType,
+  });
+  const [readUrl] = await file.getSignedUrl({
+    action: "read",
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+  return { uploadUrl, readUrl };
+}
+
 export async function uploadFromUrl(
   url: string,
   filename: string,
