@@ -665,6 +665,10 @@ export default function Home() {
 
       <footer className="text-center text-sm text-slate-400 py-8">
         Donny &mdash; AI Property Video Generator
+        <div className="mt-2 text-xs text-slate-300">
+          build {process.env.NEXT_PUBLIC_GIT_SHA} &middot;{" "}
+          {process.env.NEXT_PUBLIC_BUILD_TIME}
+        </div>
       </footer>
     </div>
   );
