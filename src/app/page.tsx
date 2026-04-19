@@ -44,6 +44,45 @@ export default function Home() {
     setLogoPrev(file ? URL.createObjectURL(file) : null);
   }, []);
 
+  // Resize photos before upload: OpenAI Vision rejects source images >20MB,
+  // and modern phone JPEGs routinely exceed that. Cap the long edge at 1600px
+  // and re-encode as JPEG — plenty of detail for classification, ~300–600KB.
+  async function resizeImage(file: File): Promise<File> {
+    const MAX_DIM = 1600;
+    const QUALITY = 0.85;
+    try {
+      const img = await createImageBitmap(file);
+      const longEdge = Math.max(img.width, img.height);
+      const scale = Math.min(1, MAX_DIM / longEdge);
+      // Skip re-encode if already small enough (<3MB and within dims)
+      if (scale >= 1 && file.size < 3 * 1024 * 1024) {
+        img.close?.();
+        return file;
+      }
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("2d context unavailable");
+      ctx.drawImage(img, 0, 0, w, h);
+      img.close?.();
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("canvas.toBlob returned null"))),
+          "image/jpeg",
+          QUALITY
+        );
+      });
+      const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+      return new File([blob], newName, { type: "image/jpeg" });
+    } catch (err) {
+      console.warn("resize failed, using original file:", file.name, err);
+      return file;
+    }
+  }
+
   // ── Helper: call a step API ─────────────────────────────────────
   async function callStep(url: string, body: FormData | object) {
     const isForm = body instanceof FormData;
@@ -98,9 +137,11 @@ export default function Home() {
     });
 
     try {
-      // ── 1. Request signed upload URLs ──────────────────────
+      // ── 1. Resize images, then request signed upload URLs ──
+      progress(1, "Preparing images...");
+      const resizedImages = await Promise.all(images.map(resizeImage));
       progress(1, "Requesting upload URLs...");
-      const imageMetas = images.map((f) => ({
+      const imageMetas = resizedImages.map((f) => ({
         file: f,
         name: f.name,
         contentType: f.type || "image/jpeg",
