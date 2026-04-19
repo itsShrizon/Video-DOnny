@@ -25,24 +25,6 @@ function getBucket(): Bucket {
   return _bucket;
 }
 
-export async function uploadBufferToGCS(
-  buffer: Buffer,
-  filename: string,
-  contentType: string
-): Promise<string> {
-  const file = getBucket().file(filename);
-  await file.save(buffer, {
-    metadata: { contentType },
-    resumable: false,
-  });
-  // Use signed URL (valid 7 days) since bucket has public access prevention
-  const [url] = await file.getSignedUrl({
-    action: "read",
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-  });
-  return url;
-}
-
 export async function getSignedUploadUrl(
   filename: string,
   contentType: string
@@ -59,6 +41,28 @@ export async function getSignedUploadUrl(
     expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
   });
   return { uploadUrl, readUrl };
+}
+
+// Upload bytes generated server-side (OpenAI TTS, musicgen output, etc.)
+// via a signed write URL + HTTP PUT — matches the client pattern and
+// avoids routing the bytes through Vercel's request/response cycle.
+export async function uploadBufferToGCS(
+  buffer: Buffer,
+  filename: string,
+  contentType: string
+): Promise<string> {
+  const { uploadUrl, readUrl } = await getSignedUploadUrl(filename, contentType);
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: buffer,
+  });
+  if (!res.ok) {
+    throw new Error(
+      `GCS upload failed (${res.status}) for ${filename}: ${await res.text()}`
+    );
+  }
+  return readUrl;
 }
 
 export async function uploadFromUrl(

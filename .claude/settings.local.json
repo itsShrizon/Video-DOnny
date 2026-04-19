@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(./node_modules/.bin/tsc --noEmit)"
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(gcloud projects *)",
+      "Bash(gcloud storage *)",
+      "Bash(rm D:/Tanzir/Donny/Video-DOnny/src/app/api/generate/route.ts)",
+      "Bash(rmdir D:/Tanzir/Donny/Video-DOnny/src/app/api/generate)"
     ]
   }
 }

@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     const musicBuf = await generateMusic();
     const url = await uploadBufferToGCS(
       musicBuf,
-      `jobs/${jobId}/audio/musicgen.wav`,
-      "audio/wav"
+      `jobs/${jobId}/audio/musicgen.mp3`,
+      "audio/mpeg"
     );
     return NextResponse.json({ audioUrls: [url], isBgMusic: true });
   }
