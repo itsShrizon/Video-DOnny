@@ -35,7 +35,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       result = await addBackgroundMusic(body.videoUrl, body.musicUrl);
       break;
     case "concatenateVideos":
-      result = await concatenateVideos(body.videoUrls);
+      result = await concatenateVideos(
+        body.videoUrls,
+        body.hasAudio !== false
+      );
       break;
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });

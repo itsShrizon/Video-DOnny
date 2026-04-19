@@ -300,6 +300,7 @@ export default function Home() {
       const { result: concatUrl } = await callStep("/api/steps/nca", {
         action: "concatenateVideos",
         videoUrls: clipsForConcat,
+        hasAudio: !isBgMusic,
       });
 
       let finalVideoUrl = concatUrl;
