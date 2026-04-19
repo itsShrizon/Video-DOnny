@@ -11,16 +11,23 @@ function getBucket(): Bucket {
       privateKey = privateKey.slice(1, -1);
     }
     // Replace escaped newlines with real newlines
-    privateKey = privateKey.replace(/\\n/g, "\n");
+    privateKey = privateKey.replace(/\\n/g, "\n").trim();
+
+    // Trailing whitespace in client_email breaks V4 signing — Google normalizes
+    // the canonical request differently than the signer does, yielding 403
+    // SignatureDoesNotMatch. Trim every env var defensively.
+    const clientEmail = (process.env.GCS_CLIENT_EMAIL || "").trim();
+    const projectId = (process.env.GCS_PROJECT_ID || "").trim();
+    const bucketName = (process.env.GCS_BUCKET_NAME || "").trim();
 
     const storage = new Storage({
-      projectId: process.env.GCS_PROJECT_ID,
+      projectId,
       credentials: {
-        client_email: process.env.GCS_CLIENT_EMAIL!,
+        client_email: clientEmail,
         private_key: privateKey,
       },
     });
-    _bucket = storage.bucket(process.env.GCS_BUCKET_NAME!);
+    _bucket = storage.bucket(bucketName);
   }
   return _bucket;
 }

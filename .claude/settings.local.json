@@ -6,7 +6,9 @@
       "Bash(gcloud projects *)",
       "Bash(gcloud storage *)",
       "Bash(rm D:/Tanzir/Donny/Video-DOnny/src/app/api/generate/route.ts)",
-      "Bash(rmdir D:/Tanzir/Donny/Video-DOnny/src/app/api/generate)"
+      "Bash(rmdir D:/Tanzir/Donny/Video-DOnny/src/app/api/generate)",
+      "Bash(vercel --version)",
+      "Bash(vercel env *)"
     ]
   }
 }
