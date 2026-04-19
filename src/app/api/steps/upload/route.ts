@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSignedUploadUrl } from "@/lib/gcs";
+import { withErrorHandler } from "@/lib/api-wrap";
 import { v4 as uuid } from "uuid";
 
 type FileMeta = { name: string; contentType: string };
@@ -17,7 +18,7 @@ function extOf(name: string, fallback: string): string {
   return raw.toLowerCase().replace(/[^a-z0-9]/g, "") || fallback;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = (await req.json()) as RequestBody;
 
   if (!body?.images?.length || !body?.logo) {
@@ -52,4 +53,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ jobId, images, logo, customAudio });
-}
+});

@@ -47,15 +47,33 @@ export default function Home() {
   // ── Helper: call a step API ─────────────────────────────────────
   async function callStep(url: string, body: FormData | object) {
     const isForm = body instanceof FormData;
-    const res = await fetch(url, {
-      method: "POST",
-      ...(isForm
-        ? { body: body as FormData }
-        : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        ...(isForm
+          ? { body: body as FormData }
+          : {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }),
+      });
+    } catch (netErr) {
+      const msg = netErr instanceof Error ? netErr.message : String(netErr);
+      throw new Error(`Network error calling ${url}: ${msg}`);
+    }
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
+      const text = await res.text().catch(() => "");
+      let detail = text;
+      try {
+        const parsed = JSON.parse(text);
+        detail = parsed.error || text;
+      } catch {
+        // leave as raw text
+      }
+      throw new Error(
+        `${url} → ${res.status}: ${detail || "(empty response body)"}`
+      );
     }
     return res.json();
   }

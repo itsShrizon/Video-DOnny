@@ -4,13 +4,13 @@ import {
   generateTitles,
   generateScript,
 } from "@/lib/openai";
+import { withErrorHandler } from "@/lib/api-wrap";
 
 export const maxDuration = 60;
 
 // Pick best 6 images + generate titles + generate script
-export async function POST(req: NextRequest) {
-  const { images, description, priceRange, audioMode, jobId } =
-    await req.json();
+export const POST = withErrorHandler(async (req: NextRequest) => {
+  const { images, description, priceRange, audioMode } = await req.json();
 
   // Parallel: pick images + titles + script
   const [best6, titles, script] = await Promise.all([
@@ -22,4 +22,4 @@ export async function POST(req: NextRequest) {
   ]);
 
   return NextResponse.json({ best6, titles, script });
-}
+});

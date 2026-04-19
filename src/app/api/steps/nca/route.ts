@@ -7,11 +7,12 @@ import {
   addBackgroundMusic,
   concatenateVideos,
 } from "@/lib/nca";
+import { withErrorHandler } from "@/lib/api-wrap";
 
 export const maxDuration = 60;
 
 // Generic NCA operation — one call at a time from the client
-export async function POST(req: NextRequest) {
+export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const { action } = body;
 
@@ -41,4 +42,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ result });
-}
+});
