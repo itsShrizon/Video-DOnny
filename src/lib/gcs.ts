@@ -55,7 +55,7 @@ export async function uploadBufferToGCS(
   const res = await fetch(uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body: buffer,
+    body: new Uint8Array(buffer),
   });
   if (!res.ok) {
     throw new Error(
